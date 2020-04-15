@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <curl/curl.h>
 #include "mh.h"
 #define SIZE 50468
 #define FIND_START "\"text\\\":\\\""
@@ -89,6 +90,47 @@ void	display_list(t_trlist *trl)
 	}
 }
 
+void	display_list_tr(t_trlist *trl)
+{
+	while (trl != NULL)
+	{
+		if (strlen(trl->str_to_trans) > 0)
+			printf("Translated string:\t""\x1b[36m""%s\n""\x1b[0m", trl->translated_str);
+		trl = trl->next;
+	}
+}
+
+void	display_list_all(t_trlist *trl)
+{
+	while (trl != NULL)
+	{
+		if (strlen(trl->str_to_trans) > 0)
+		{
+			printf("\nOriginal:\t""\x1b[31m""%s\n""\x1b[0m", trl->str_to_trans);
+			printf("Translated:\t""\x1b[93m""%s\n""\x1b[0m", trl->translated_str);
+		}
+		trl = trl->next;
+	}
+}
+
+char	*insert_str(char *buff, char *str_to_insert, int ii, int old_str_len)
+{
+	char	*newbuff;
+	int	taillen;
+	int	new_str_len;
+
+	taillen = strlen(buff) - ii - old_str_len;
+	new_str_len = strlen(str_to_insert);
+	newbuff = (char *)malloc(sizeof(char) * (ii + new_str_len + taillen) + 1);
+	if (NULL == newbuff)
+		return (NULL);
+	strncpy(newbuff, buff, ii);
+	strncpy(newbuff + ii, str_to_insert, new_str_len);
+	strncpy(newbuff + (ii + new_str_len), buff + (ii + old_str_len - 1), taillen);
+	newbuff[ii + new_str_len + taillen] = '\0';
+	return (newbuff);
+}
+
 int	edit_file(const char *filename)
 {
 	int	fd;
@@ -113,13 +155,20 @@ int	edit_file(const char *filename)
 		return (2);
 	}
 	buff[read(fd, buff, fs)] = '\0';
+	printf("old buff: %s\n", buff);
 	/* Search all needles in buff */
 	trl = findall(buff);
 
-	display_list(trl);
+//	display_list(trl);
 
 	/* Translate string through Yandex */
-	
+//	translate(trl);
+
+//	display_list_tr(trl);
+//	display_list_all(trl);
+	buff = insert_str(buff, "ТЕСТ!!!", trl->ii, trl->len);
+//	buff = insert_str(buff, "ТЕСТ!!!", trl->next->ii, trl->next->len);
+	printf("new buff: %s\n", buff);
 	/* Write translated string into buff */
 	printf("\n\n\n\n\n\n\nEEEEEEEEEEEEEEEENNNNNNNNNNNNNNNNNNNNNDDDDDDDDDDDDDDDDDD\n");
 	if (close(fd) == -1)
@@ -130,6 +179,8 @@ int	edit_file(const char *filename)
 
 int	main(void)
 {
+	/* Init part */
+	curl_global_init(CURL_GLOBAL_ALL);	
 	/* 1. File searching */ 
 	
 	/* 2. File editing */
@@ -138,5 +189,7 @@ int	main(void)
 	/* End of 2. File editing */
 
 	/* End of 1. File searching */
+
+	curl_global_cleanup();
 	return (0);
 }
