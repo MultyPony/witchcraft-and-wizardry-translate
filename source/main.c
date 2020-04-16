@@ -55,14 +55,16 @@ t_trlist	*getlistelem(char *buff, int shift)
 	endstr = ft_strstr(startstr, FIND_END);
 	if (NULL == endstr)
 		return (NULL);
-	elem->len = endstr - startstr - 1;
+	elem->len = endstr - startstr - 2;
 	endstr = ft_strnstr(startstr, FIND_NEWLINE, elem->len);
 	if (NULL != endstr)
-		elem->len = endstr - startstr - 2;
+		elem->len = endstr - startstr - 3;
+	if (' ' == buff[elem->ii + elem->len - 1])
+		elem->len -= 1;
 	elem->str_to_trans = (char *)malloc(elem->len * sizeof(char));
 	if (NULL == elem->str_to_trans)
 		return (NULL);
-	ft_strncpy(elem->str_to_trans, startstr, elem->len);
+	ft_strncpy(elem->str_to_trans, startstr, elem->len + 1);
 	return (elem);
 }
 
@@ -126,7 +128,7 @@ char	*insert_str(char *buff, char *str_to_insert, int ii, int old_str_len)
 		return (NULL);
 	strncpy(newbuff, buff, ii);
 	strncpy(newbuff + ii, str_to_insert, new_str_len);
-	strncpy(newbuff + (ii + new_str_len), buff + (ii + old_str_len - 1), taillen);
+	strncpy(newbuff + (ii + new_str_len), buff + (ii + old_str_len), taillen);
 	newbuff[ii + new_str_len + taillen] = '\0';
 	return (newbuff);
 }
@@ -155,20 +157,20 @@ int	edit_file(const char *filename)
 		return (2);
 	}
 	buff[read(fd, buff, fs)] = '\0';
-	printf("old buff: %s\n", buff);
+//	printf("old buff: %s\n", buff);
 	/* Search all needles in buff */
 	trl = findall(buff);
 
 //	display_list(trl);
 
 	/* Translate string through Yandex */
-//	translate(trl);
+	translate(trl);
 
 //	display_list_tr(trl);
-//	display_list_all(trl);
-	buff = insert_str(buff, "ТЕСТ!!!", trl->ii, trl->len);
+	display_list_all(trl);
+//	buff = insert_str(buff, "ТЕСТ!!!", trl->ii, trl->len);
 //	buff = insert_str(buff, "ТЕСТ!!!", trl->next->ii, trl->next->len);
-	printf("new buff: %s\n", buff);
+//	printf("new buff: %s\n", buff);
 	/* Write translated string into buff */
 	printf("\n\n\n\n\n\n\nEEEEEEEEEEEEEEEENNNNNNNNNNNNNNNNNNNNNDDDDDDDDDDDDDDDDDD\n");
 	if (close(fd) == -1)
