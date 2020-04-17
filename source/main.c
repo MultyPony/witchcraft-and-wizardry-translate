@@ -35,7 +35,7 @@ char	*skip(char *str)
 	}
 	return (str);
 }
-
+/*
 t_trlist	*getlistelem(char *buff, int shift)
 {
 	t_trlist	*elem;
@@ -59,9 +59,50 @@ t_trlist	*getlistelem(char *buff, int shift)
 	endstr = ft_strnstr(startstr, FIND_NEWLINE, elem->len);
 	if (NULL != endstr)
 		elem->len = endstr - startstr - 3;
-	if (' ' == buff[elem->ii + elem->len - 1])
-		elem->len -= 1;
+//	if (' ' == buff[elem->ii + elem->len - 1])
+//		elem->len -= 1;
 	elem->str_to_trans = (char *)malloc(elem->len * sizeof(char));
+	if (NULL == elem->str_to_trans)
+		return (NULL);
+	ft_strncpy(elem->str_to_trans, startstr, elem->len + 1);
+	return (elem);
+}
+*/
+t_trlist	*getlistelem(char *buff, int shift)
+{
+	t_trlist	*elem;
+	char		*startstr;
+	char		*endstr;
+	char 		*shifted_buff;
+	int		len;
+	int		blen;
+
+	blen = strlen(buff);
+	shifted_buff = buff + shift;
+	startstr = ft_strstr(shifted_buff, FIND_START);
+	startstr = skip(startstr);
+	if (NULL == startstr)
+		return (NULL);
+	endstr = ft_strstr(startstr, FIND_END);
+	if (NULL == endstr)
+		return (NULL);
+	len = endstr - startstr - 2;
+	endstr = ft_strnstr(startstr, FIND_NEWLINE, len);
+	if (NULL != endstr)
+		len = endstr - startstr - 3;
+	if (len == 0 && shift < blen)
+	{
+		return (getlistelem(buff, shift + 1));
+	}
+	elem = (t_trlist *)malloc(sizeof(t_trlist));
+	if (NULL == elem)
+		return (NULL);
+	elem->ii = startstr - buff;
+	elem->len = len;
+//	if (' ' == buff[elem->ii + elem->len - 1])
+//		elem->len -= 1;
+//	printf("elem->len: %d\n", elem->len);
+	elem->str_to_trans = (char *)malloc(elem->len * sizeof(char) + 1);
 	if (NULL == elem->str_to_trans)
 		return (NULL);
 	ft_strncpy(elem->str_to_trans, startstr, elem->len + 1);
@@ -172,6 +213,7 @@ int	edit_file(const char *filename)
 //	buff = insert_str(buff, "ТЕСТ!!!", trl->next->ii, trl->next->len);
 //	printf("new buff: %s\n", buff);
 	/* Write translated string into buff */
+	free(trl);
 	printf("\n\n\n\n\n\n\nEEEEEEEEEEEEEEEENNNNNNNNNNNNNNNNNNNNNDDDDDDDDDDDDDDDDDD\n");
 	if (close(fd) == -1)
 		printf("Close error\n");
