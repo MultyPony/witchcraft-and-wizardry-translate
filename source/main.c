@@ -250,45 +250,54 @@ int	edit_file(const char *filename)
 
 /* Search for a file and translate it */
 
-void	search_translate(char *dirn)
+void	search_translate(char *current_dir)
 {
 	DIR		*dir;
 	struct dirent	*dt;
-	char		*dir_name;
-	int		lend;
+	char		*full_path;
 	t_list		*tl;
 	t_list		*stl;
 
-	lend = strlen(dirn);
-	dir = opendir(dirn);
+	dir = opendir(current_dir);
 	if (dir)
 	{
 		tl = NULL;
-		tl = (t_list *)malloc(sizeof(t_list));
-		stl = tl;
+		stl = NULL;
 		while ((dt = readdir(dir)) != NULL)
 		{
 			if (strcmp(dt->d_name, ".") != 0 
 				&& strcmp(dt->d_name, "..") != 0
 				&& strcmp(dt->d_name, ".git") != 0)
 			{
-				dir_name = (char *)malloc(sizeof(char) * lend + 1);
-				strcpy(dir_name, dirn);
-				strcat(dir_name, "/");
-				strcat(dir_name, dt->d_name);
-				if (isdir(dir_name)) 
+				full_path = (char *)malloc(sizeof(char) * (strlen(current_dir) + strlen(dt->d_name)  + 2));
+				strcpy(full_path, current_dir);
+				strcat(full_path, "/");
+				strcat(full_path, dt->d_name);
+				if (isdir(full_path)) 
 				{		
 					//add folder name to list
-					tl->dirn = dir_name;
-					tl->next = (t_list *)malloc(sizeof(t_list));
-					tl = tl->next;
+					if (NULL == stl)
+					{
+						tl = (t_list *)malloc(sizeof(t_list));	
+						if (NULL == tl)
+							return ;
+						stl = tl;
+
+					}
+					else
+					{
+						tl->next = (t_list *)malloc(sizeof(t_list));
+						if (NULL == tl->next)
+							return ;
+						tl = tl->next;
+					}
+					tl->dirn = full_path;
+					tl->next = NULL;
 				}
 				else
-					edit_file(dir_name);
+					edit_file(full_path);
 			}
 		}
-		tl->next = NULL;
-		tl = stl;
 		while (stl && stl->dirn)
 		{
 			search_translate(stl->dirn);
