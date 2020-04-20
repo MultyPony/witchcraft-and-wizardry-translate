@@ -6,11 +6,34 @@
 #include <stdlib.h>
 #include <string.h>
 #include <curl/curl.h>
+#include <dirent.h>
 #include "mh.h"
-#define SIZE 50468
 #define FIND_START "\"text\\\":\\\""
 #define FIND_NEWLINE "\\\\n"
 #define FIND_END "\""
+
+typedef struct	s_lent
+{
+	struct dirent *ent;
+	struct lent *next;
+}		t_lent;
+
+int	isdir(char *n)
+{
+	struct stat st;
+	stat(n, &st);
+	if (S_ISDIR(st.st_mode))
+		return(1);
+	return (0);
+}
+
+typedef struct	s_list	t_list;
+
+struct	s_list
+{
+	char *dirn;
+	t_list *next;
+};
 
 int	get_file_size(int fd)
 {
@@ -99,9 +122,6 @@ t_trlist	*getlistelem(char *buff, int shift)
 		return (NULL);
 	elem->ii = startstr - buff;
 	elem->len = len;
-//	if (' ' == buff[elem->ii + elem->len - 1])
-//		elem->len -= 1;
-//	printf("elem->len: %d\n", elem->len);
 	elem->str_to_trans = (char *)malloc(elem->len * sizeof(char) + 1);
 	if (NULL == elem->str_to_trans)
 		return (NULL);
@@ -156,6 +176,8 @@ void	display_list_all(t_trlist *trl)
 	}
 }
 
+
+/* Insert string into buffer at def position */
 char	*insert_str(char *buff, char *str_to_insert, int ii, int old_str_len)
 {
 	char	*newbuff;
@@ -174,14 +196,22 @@ char	*insert_str(char *buff, char *str_to_insert, int ii, int old_str_len)
 	return (newbuff);
 }
 
+void	changeii(t_trlist *trl, int shift)
+{
+	while (NULL != trl)
+	{
+		trl->ii += shift;
+		trl = trl->next;
+	}
+}
+
 int	edit_file(const char *filename)
 {
 	int	fd;
 	int	fs;
-//	int	strc;
 	char	*buff;
-//	char	*strtotrans;
 	t_trlist	*trl;
+	t_trlist	*strl;
 
 	fd = open(filename, O_RDWR);
 	if (fd == -1)
@@ -190,7 +220,6 @@ int	edit_file(const char *filename)
 		return (1);
 	}
 	fs = get_file_size(fd); 
-//	printf("fs = %d\n", fs);
 	buff = (char *)malloc(fs * sizeof(char) + 1);
 	if (buff == NULL)
 	{
@@ -198,42 +227,83 @@ int	edit_file(const char *filename)
 		return (2);
 	}
 	buff[read(fd, buff, fs)] = '\0';
-//	printf("old buff: %s\n", buff);
+	lseek(fd, 0, SEEK_SET);
 	/* Search all needles in buff */
 	trl = findall(buff);
-
-//	display_list(trl);
-
 	/* Translate string through Yandex */
 	translate(trl);
-
-//	display_list_tr(trl);
-	display_list_all(trl);
-//	buff = insert_str(buff, "ТЕСТ!!!", trl->ii, trl->len);
-//	buff = insert_str(buff, "ТЕСТ!!!", trl->next->ii, trl->next->len);
-//	printf("new buff: %s\n", buff);
+//	display_list_all(trl);
+	strl = trl;
+	while (NULL != strl)
+	{
+		buff = insert_str(buff, strl->translated_str, strl->ii, strl->len);
+		changeii(strl->next, strlen(strl->translated_str) - strl->len);
+		strl = strl->next;
+	}
 	/* Write translated string into buff */
 	free(trl);
-	printf("\n\n\n\n\n\n\nEEEEEEEEEEEEEEEENNNNNNNNNNNNNNNNNNNNNDDDDDDDDDDDDDDDDDD\n");
+	write(fd, buff, strlen(buff));
 	if (close(fd) == -1)
 		printf("Close error\n");
 	return (0);
 }
 
+/* Search for a file and translate it */
+
+void	search_translate(char *dirn)
+{
+	DIR		*dir;
+	struct dirent	*dt;
+	char		*dir_name;
+	int		lend;
+	t_list		*tl;
+	t_list		*stl;
+
+	lend = strlen(dirn);
+	dir = opendir(dirn);
+	if (dir)
+	{
+		tl = NULL;
+		tl = (t_list *)malloc(sizeof(t_list));
+		stl = tl;
+		while ((dt = readdir(dir)) != NULL)
+		{
+			if (strcmp(dt->d_name, ".") != 0 
+				&& strcmp(dt->d_name, "..") != 0
+				&& strcmp(dt->d_name, ".git") != 0)
+			{
+				dir_name = (char *)malloc(sizeof(char) * lend + 1);
+				strcpy(dir_name, dirn);
+				strcat(dir_name, "/");
+				strcat(dir_name, dt->d_name);
+				if (isdir(dir_name)) 
+				{		
+					//add folder name to list
+					tl->dirn = dir_name;
+					tl->next = (t_list *)malloc(sizeof(t_list));
+					tl = tl->next;
+				}
+				else
+					edit_file(dir_name);
+			}
+		}
+		tl->next = NULL;
+		tl = stl;
+		while (stl && stl->dirn)
+		{
+			search_translate(stl->dirn);
+			free(stl->dirn);
+			stl = stl->next;
+		}
+		free(tl);
+	}
+}
 
 int	main(void)
 {
-	/* Init part */
 	curl_global_init(CURL_GLOBAL_ALL);	
-	/* 1. File searching */ 
-	
-	/* 2. File editing */
-	edit_file("temp/hermione.mcfunction");	
+	search_translate(".");
 	printf("End of Program\n");
-	/* End of 2. File editing */
-
-	/* End of 1. File searching */
-
 	curl_global_cleanup();
 	return (0);
 }
